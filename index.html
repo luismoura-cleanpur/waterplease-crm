@@ -186,7 +186,9 @@ const EQUIP=['ROH2ICE','Garrafa H₂','Ultra Detox H₂','Garrafas personalizada
 const DB={
   supa:null, synced:false,
   init(){
-    const url=localStorage.getItem('supa_url'), key=localStorage.getItem('supa_key');
+    const DEF_URL='https://qczgsvpjmzuopweekxez.supabase.co';
+    const DEF_KEY='sb_publishable_a8NASJiCJkUdRTV060l7mg_PXAYLs6I';
+    const url=localStorage.getItem('supa_url')||DEF_URL, key=localStorage.getItem('supa_key')||DEF_KEY;
     if(url&&key&&window.supabase){ try{ this.supa=window.supabase.createClient(url,key); this.synced=true; }catch(e){ this.synced=false; } }
   },
   _local(){ return JSON.parse(localStorage.getItem('wp_leads')||'[]'); },
