@@ -146,6 +146,16 @@ a{color:var(--green)}
   opacity:0;transition:.25s;pointer-events:none;box-shadow:0 6px 20px rgba(0,0,0,.3)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .wm{text-align:center;color:var(--muted);font-size:11px;margin:26px 0 8px}
+.gate{position:fixed;inset:0;z-index:80;background:radial-gradient(1000px 700px at 80% -10%,#013a54,transparent 60%),var(--navy);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;text-align:center}
+.gate img{width:76px;margin-bottom:18px}
+.gate h2{font-family:'Chubbo';font-size:26px}
+.gate p{color:var(--muted);font-size:13.5px;margin:7px 0 26px;max-width:300px;line-height:1.5}
+.gate .box{width:100%;max-width:340px}
+.gate input{width:100%;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px;color:var(--ink);margin-bottom:11px;text-align:left}
+.gate input:focus{outline:none;border-color:var(--green)}
+.gate .err{color:var(--red);font-size:13px;min-height:20px;margin-top:6px}
+.gate.hide{display:none}
+.logout{width:100%;padding:15px;border-radius:14px;background:transparent;border:1.5px solid var(--red);color:var(--red);font-weight:700;font-size:15px;font-family:'Chubbo';margin-top:6px}
 </style>
 </head>
 <body>
@@ -168,6 +178,18 @@ a{color:var(--green)}
 
 <div class="ov" id="ov"><div id="ovc"></div></div>
 <div class="toast" id="toast"></div>
+
+<div class="gate hide" id="gate">
+  <img src="simbolo-verde.png" alt="">
+  <h2>CRM Water Please</h2>
+  <p>Entra com o teu email e palavra-passe para acederes aos leads.</p>
+  <div class="box">
+    <input id="g_email" type="email" placeholder="Email" autocomplete="username" inputmode="email">
+    <input id="g_pw" type="password" placeholder="Palavra-passe" autocomplete="current-password">
+    <button class="btn" onclick="doLogin()">Entrar</button>
+    <div class="err" id="g_err"></div>
+  </div>
+</div>
 
 <script>
 const STAGES=[
@@ -297,6 +319,8 @@ create policy "acesso" on leads for all using (true) with check (true);`;
     <div class="fld"><label>Anon public key</label><input id="sk" placeholder="eyJhbGci…" value="${esc(key)}"></div>
     <button class="btn" onclick="saveSupa()">Ligar e sincronizar</button>
     <button class="btn ghost" onclick="clearSupa()" style="margin-top:10px">Desligar backend</button>
+    <div class="sechd">🔐 Conta</div>
+    <button class="logout" onclick="logout()">Sair (terminar sessão)</button>
     <div class="sechd">📦 Dados</div>
     <button class="btn ghost" onclick="exportJSON()">Exportar tudo (JSON)</button>
     <button class="btn ghost" onclick="seed()" style="margin-top:10px">Adicionar 3 leads de exemplo</button>
@@ -401,10 +425,32 @@ async function seed(){ const demo=[
 ];
   for(const d of demo){ await DB.add(d); } toast('3 leads adicionados'); await load(); go('pipeline'); }
 
+// ---------- auth ----------
+async function doLogin(){
+  const email=document.getElementById('g_email').value.trim();
+  const pw=document.getElementById('g_pw').value;
+  const err=document.getElementById('g_err');
+  if(!email||!pw){ err.textContent='Preenche email e palavra-passe'; return; }
+  err.style.color='var(--muted)'; err.textContent='A entrar…';
+  const {error}=await DB.supa.auth.signInWithPassword({email,password:pw});
+  if(error){ err.style.color='var(--red)'; err.textContent='Email ou palavra-passe errados'; return; }
+  document.getElementById('gate').classList.add('hide');
+  await load(); go('pipeline');
+}
+async function logout(){ if(DB.supa){ try{ await DB.supa.auth.signOut(); }catch(e){} } location.reload(); }
+
 // ---------- boot ----------
 document.querySelectorAll('.navb').forEach(b=>b.onclick=()=>go(b.dataset.nav));
 document.getElementById('fab').onclick=newLead;
-DB.init(); load().then(()=>{ go('pipeline'); });
+DB.init();
+(async function boot(){
+  if(DB.synced){
+    try{ const {data}=await DB.supa.auth.getSession();
+      if(!data.session){ document.getElementById('gate').classList.remove('hide'); return; }
+    }catch(e){}
+  }
+  await load(); go('pipeline');
+})();
 </script>
 </body>
 </html>
